@@ -6,7 +6,7 @@ const app = express()
 
 const dbPath = path.join(__dirname, 'studend.db')
 
-
+console.log('aaa')
 
 let db = null
 
