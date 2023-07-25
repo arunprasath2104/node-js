@@ -8,6 +8,7 @@ const dbPath = path.join(__dirname, 'studend.db')
 
 console.log('aaa')
 
+//initialize database
 let db = null
 
 const initialiseServerAdDatabase = async () => {
