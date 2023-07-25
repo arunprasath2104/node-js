@@ -1,6 +1,7 @@
 const express = require('express')
 const { open } = require('sqlite')
 const path = require('path')
+const fetch = require('node-fetch')
 const sqlite3 = require('sqlite3')
 const app = express()
 
@@ -33,6 +34,7 @@ const getData = async () => {
      CREATE TABLE product(
         id  NOT NULL PRIMARY KEY,
         title TEXT,
+        price FLOAT,
         description TEXT,
         category TEXT,
         image TEXT,
@@ -43,21 +45,24 @@ const getData = async () => {
 
     try {
         await db.run(table)
-        const each = data[0]
+        
+        const values = data.map((each)=>{
+           return `(${each.id}, "${each.title}", ${each.price}, "${each.description}", "${each.category}", "${each.image}", ${each.sold}, "${each.dateOfSale}")`
+        }).join(', ')
         const insert_values = `
           INSERT INTO 
             product(
-                id, title, description, category, image, sold, date_of_sale
+                id, title, price, description, category, image, sold, date_of_sale
             )
           VALUES
-          (${each.id}, "${each.title}", "${each.description}", "${each.category}", "${each.image}", ${each.sold}, "${each.dateOfSale}")  
+            ${values}
         ;`
 
         await db.run(insert_values)
         console.log('Products table created successfully')
 
     } catch (error) {
-        console.log(error)
+        console.log("Already product table exists")
     }
 }
 
@@ -68,7 +73,38 @@ getData()
 app.get("/", async(req,res) => {
     const SQL_QUERRY = `SELECT * FROM product;`
     const dbResponse = await db.all(SQL_QUERRY)
-    
     res.send(dbResponse)
+
+    const deleteTableQuery = `DROP TABLE product;`
+    db.run(deleteTableQuery)
+})
+
+app.get('/statistics/:month', async(req,res)=>{
+    const {month} = req.params
+
+    const quary = `
+        SELECT 
+        COUNT(
+            CASE
+                WHEN sold = true THEN 1
+                END 
+        ) as sold_items,
+        COUNT(
+            CASE
+                WHEN sold <> true THEN 1
+                END 
+        ) as unsold_items,
+        SUM(
+            CASE
+                WHEN sold = true THEN price
+                END 
+        ) as total_sale_price
+        FROM product
+        WHERE strftime('%m',date_of_sale) = "${month}"
+    ;`;
+
+    const need_data = await db.get(quary)
+
+    res.send(need_data)
 })
 
